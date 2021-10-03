@@ -1,0 +1,23 @@
+{
+  "name": "insomnia-plugin-fault-variables",
+  "version": "1.0.0",
+  "author": "Sebastian Dernbach <sebastian.dernbach@ionos.com>",
+  "description": "Insomnia Fault Variables",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "ssh://git@github.com:sebastiande/insomnia-plugin-fault-variables.git"
+  },
+  "main": "index.js",
+  "insomnia": {
+    "name": "Fault Variables",
+    "description": "Insert fault properties within your calls (eg. username and passwords)"
+  },
+  "dependencies": {
+    "properties-reader": "^2.2.0"
+  },
+  "files": [
+    "index.js",
+    "package.json"
+  ]
+}
