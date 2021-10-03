@@ -1,6 +1,6 @@
 {
   "name": "insomnia-plugin-fault-variables",
-  "version": "1.0.0",
+  "version": "0.9.9",
   "author": "Sebastian Dernbach <sebastian.dernbach@ionos.com>",
   "description": "Insomnia Fault Variables",
   "license": "MIT",
@@ -13,11 +13,17 @@
     "name": "Fault Variables",
     "description": "Insert fault properties within your calls (eg. username and passwords)"
   },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org"
+  },
   "dependencies": {
     "properties-reader": "^2.2.0"
   },
   "files": [
     "index.js",
     "package.json"
-  ]
+  ],
+  "devDependencies": {
+    "np": "^7.5.0"
+  }
 }
