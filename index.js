@@ -1,7 +1,7 @@
 const fs = require('fs');
 const os = require('os');
 const propertiesReader = require('properties-reader');
-const defaultFaultPaths = ['~/.fault/', '/root/.fault'];
+const defaultFaultPaths = ['~/.fault/', '/root/.fault/'];
 
 function readFaultProperty(project, filepath, property) {
   const faultPath = getFaultPath();
