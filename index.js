@@ -1,44 +1,4 @@
-const fs = require('fs');
-const os = require('os');
-const propertiesReader = require('properties-reader');
 const defaultFaultPaths = ['~/.fault/', '/root/.fault/'];
-
-function readFaultProperty(project, filepath, property) {
-  const faultPath = getFaultPath();
-  if (faultPath === null) {
-    console.error('[insomnia-plugin-fault-variables] can not find fault directory, only searched within home directory ~/.fault/');
-    return '[ERROR] Fault not mounted (Can not find fault in ~/.fault)!';
-  }
-
-  const projectPath = faultPath + project + '/';
-  if (!fs.existsSync(projectPath)) {
-    console.error('[insomnia-plugin-fault-variables] can not find project in: ' + projectPath);
-    return '[ERROR] can not find project in ' + projectPath;
-  }
-
-  const propertyFile = projectPath + filepath;
-  if (!fs.existsSync(propertyFile)) {
-    console.error('[insomnia-plugin-fault-variables] can not find property file: ' + propertyFile);
-    return '[ERROR] can not find property file in ' + propertyFile;
-  }
-
-  const properties = propertiesReader(propertyFile);
-  const value = properties.get(property);
-  if (value) {
-    return value;
-  }
-  return '[ERROR] Not found';
-}
-
-function getFaultPath() {
-  for (let path of defaultFaultPaths) {
-    path = path.replaceAll('~', os.homedir());
-    if (fs.existsSync(path)) {
-      return path;
-    }
-  }
-  return null;
-}
 
 module.exports.templateTags = [{
     name: 'faultVariable',
@@ -67,9 +27,47 @@ module.exports.templateTags = [{
             placeholder: 'service.password'
         }
     ],
-    async run (context, project, filepath, property) {
+    async run(context, project, filepath, property) {
+      // Requires must be inside run() for Insomnia 13+ compatibility (plugin sandbox)
+      const fs = require('fs');
+      const os = require('os');
+      const propertiesReader = require('properties-reader');
+
+      function getFaultPath() {
+        for (let faultPath of defaultFaultPaths) {
+          faultPath = faultPath.replaceAll('~', os.homedir());
+          if (fs.existsSync(faultPath)) {
+            return faultPath;
+          }
+        }
+        return null;
+      }
+
       try {
-        return readFaultProperty(project, filepath, property);
+        const faultPath = getFaultPath();
+        if (faultPath === null) {
+          console.error('[insomnia-plugin-fault-variables] can not find fault directory, only searched within home directory ~/.fault/');
+          return '[ERROR] Fault not mounted (Can not find fault in ~/.fault)!';
+        }
+
+        const projectPath = faultPath + project + '/';
+        if (!fs.existsSync(projectPath)) {
+          console.error('[insomnia-plugin-fault-variables] can not find project in: ' + projectPath);
+          return '[ERROR] can not find project in ' + projectPath;
+        }
+
+        const propertyFile = projectPath + filepath;
+        if (!fs.existsSync(propertyFile)) {
+          console.error('[insomnia-plugin-fault-variables] can not find property file: ' + propertyFile);
+          return '[ERROR] can not find property file in ' + propertyFile;
+        }
+
+        const properties = propertiesReader(propertyFile);
+        const value = properties.get(property);
+        if (value) {
+          return value;
+        }
+        return '[ERROR] Not found';
       } catch (e) {
         console.error(e);
       }
