@@ -10,6 +10,7 @@
   },
   "main": "index.js",
   "scripts": {
+    "test": "echo \"No tests\"",
     "release": "np"
   },
   "insomnia": {
