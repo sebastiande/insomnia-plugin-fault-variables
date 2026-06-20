@@ -8,4 +8,4 @@ This plugin can read property files out of fault and includes the value of a pro
 
 # Publish Package
 
-Use `np` command to publish the package.
+Use `npm run release` command to publish the package.

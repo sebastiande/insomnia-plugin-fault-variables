@@ -9,6 +9,9 @@
     "url": "ssh://git@github.com:sebastiande/insomnia-plugin-fault-variables.git"
   },
   "main": "index.js",
+  "scripts": {
+    "release": "np"
+  },
   "insomnia": {
     "name": "Fault Variables",
     "description": "Insert fault properties within your calls (eg. username and passwords)"
