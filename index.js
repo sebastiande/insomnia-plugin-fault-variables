@@ -1,5 +1,17 @@
 const defaultFaultPaths = ['~/.fault/', '/root/.fault/'];
 
+function isUnresolvedRef(v) {
+    return typeof v === 'string' && /^_[.\[]/.test(v);
+}
+
+function resolveRef(context, value) {
+    if (!isUnresolvedRef(value)) return value;
+    const m = value.match(/^_\.(.+)$/) || value.match(/^_\[['"](.+)['"]\]$/);
+    const varName = m && m[1];
+    const env = context && context.context;
+    return (env && env[varName] != null) ? String(env[varName]) : value;
+}
+
 module.exports.templateTags = [{
     name: 'faultVariable',
     displayName: 'Fault Variable',
@@ -28,44 +40,53 @@ module.exports.templateTags = [{
         }
     ],
     async run(context, project, filepath, property) {
-      try {
-        const fs = require('fs');
-        const os = require('os');
-        const { propertiesReader } = require('properties-reader');
+        project = resolveRef(context, project);
+        filepath = resolveRef(context, filepath);
+        property = resolveRef(context, property);
+        try {
+            const fs = require('fs');
+            const os = require('os');
+            const path = require('path');
+            const {propertiesReader} = require('properties-reader');
 
-        function getFaultPath() {
-          for (let faultPath of defaultFaultPaths) {
-            faultPath = faultPath.replaceAll('~', os.homedir());
-            if (fs.existsSync(faultPath)) {
-              return faultPath;
+            // Windows does not allow colons in paths; fault stores 'group:artifact' as 'groupartifact'
+            function resolveProject(proj) {
+                return os.platform() === 'win32' ? proj.replace(/:/g, '') : proj;
             }
-          }
-          return null;
-        }
 
-        const faultPath = getFaultPath();
-        if (faultPath === null) {
-          return '[ERROR] Fault not mounted (Can not find fault in ~/.fault)!';
-        }
+            function getFaultPath() {
+                for (let faultPath of defaultFaultPaths) {
+                    faultPath = faultPath.replace('~', os.homedir());
+                    if (fs.existsSync(faultPath)) {
+                        return faultPath;
+                    }
+                }
+                return null;
+            }
 
-        const projectPath = faultPath + project + '/';
-        if (!fs.existsSync(projectPath)) {
-          return '[ERROR] can not find project in ' + projectPath;
-        }
+            const faultPath = getFaultPath();
+            if (faultPath === null) {
+                return '[ERROR] Fault not mounted (Can not find fault in ~/.fault)!';
+            }
 
-        const propertyFile = projectPath + filepath;
-        if (!fs.existsSync(propertyFile)) {
-          return '[ERROR] can not find property file in ' + propertyFile;
-        }
+            const projectPath = path.join(faultPath, resolveProject(project));
+            if (!fs.existsSync(projectPath)) {
+                return '[ERROR] can not find project in ' + projectPath;
+            }
 
-        const properties = propertiesReader({ sourceFile: propertyFile });
-        const value = properties.get(property);
-        if (value !== null && value !== undefined) {
-          return String(value);
+            const propertyFile = path.join(projectPath, filepath);
+            if (!fs.existsSync(propertyFile)) {
+                return '[ERROR] can not find property file in ' + propertyFile;
+            }
+
+            const properties = propertiesReader({sourceFile: propertyFile});
+            const value = properties.get(property);
+            if (value !== null && value !== undefined) {
+                return String(value);
+            }
+            return '[ERROR] Property "' + property + '" not found in ' + propertyFile;
+        } catch (e) {
+            return '[ERROR] ' + (e.message || String(e));
         }
-        return '[ERROR] Property "' + property + '" not found in ' + propertyFile;
-      } catch (e) {
-        return '[ERROR] ' + (e.message || String(e));
-      }
     }
 }];
