@@ -1,3 +1,7 @@
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
 const defaultFaultPaths = ['~/.fault/', '/root/.fault/'];
 
 function isUnresolvedRef(v) {
@@ -10,6 +14,47 @@ function resolveRef(context, value) {
     const varName = m && m[1];
     const env = context && context.context;
     return (env && env[varName] != null) ? String(env[varName]) : value;
+}
+
+function isYamlFile(filepath) {
+    return /\.ya?ml$/i.test(filepath);
+}
+
+function isScalar(value) {
+    return value !== null && value !== undefined && typeof value !== 'object';
+}
+
+function resolveDotPath(document, dotPath) {
+    return dotPath.split('.').reduce(
+        (node, key) => (node !== null && typeof node === 'object' && Object.hasOwn(node, key)) ? node[key] : undefined,
+        document
+    );
+}
+
+// The failsafe schema keeps every scalar as the string written in the file, so secrets like 0123 are not turned into numbers.
+function parseYamlDocuments(content) {
+    const {loadAll, FAILSAFE_SCHEMA, YAMLException} = require('js-yaml');
+    try {
+        return loadAll(content, {schema: FAILSAFE_SCHEMA});
+    } catch (e) {
+        // The default message quotes the surrounding lines of the file, which may contain secrets.
+        if (e instanceof YAMLException) {
+            throw new Error(e.toString(true));
+        }
+        throw e;
+    }
+}
+
+// Returns the first scalar found at the dot path, searching the documents of the file in order.
+function readYamlProperty(file, property) {
+    const documents = parseYamlDocuments(fs.readFileSync(file, 'utf8'));
+    const values = documents.map(document => resolveDotPath(document, property));
+    return values.find(isScalar);
+}
+
+function readPropertiesProperty(file, property) {
+    const {propertiesReader} = require('properties-reader');
+    return propertiesReader({sourceFile: file}).get(property);
 }
 
 module.exports.templateTags = [{
@@ -33,7 +78,7 @@ module.exports.templateTags = [{
         },
         {
             displayName: 'Property',
-            description: 'The property that should be read',
+            description: 'The property that should be read (a dot path like toolbox.credentials.username for YAML files)',
             type: 'string',
             defaultValue: '',
             placeholder: 'service.password'
@@ -44,11 +89,6 @@ module.exports.templateTags = [{
         filepath = resolveRef(context, filepath);
         property = resolveRef(context, property);
         try {
-            const fs = require('fs');
-            const os = require('os');
-            const path = require('path');
-            const {propertiesReader} = require('properties-reader');
-
             // Windows does not allow colons in paths; fault stores 'group:artifact' as 'groupartifact'
             function resolveProject(proj) {
                 return os.platform() === 'win32' ? proj.replace(/:/g, '') : proj;
@@ -79,8 +119,9 @@ module.exports.templateTags = [{
                 return '[ERROR] can not find property file in ' + propertyFile;
             }
 
-            const properties = propertiesReader({sourceFile: propertyFile});
-            const value = properties.get(property);
+            const value = isYamlFile(filepath)
+                ? readYamlProperty(propertyFile, property)
+                : readPropertiesProperty(propertyFile, property);
             if (value !== null && value !== undefined) {
                 return String(value);
             }

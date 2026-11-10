@@ -10,7 +10,7 @@
   },
   "main": "index.js",
   "scripts": {
-    "test": "echo \"No tests\"",
+    "test": "node --test",
     "release": "np"
   },
   "insomnia": {
@@ -21,6 +21,7 @@
     "registry": "https://registry.npmjs.org"
   },
   "dependencies": {
+    "js-yaml": "^5.5.0",
     "properties-reader": "^3.0.1"
   },
   "files": [
@@ -29,5 +30,8 @@
   ],
   "devDependencies": {
     "np": "^11.2.1"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
